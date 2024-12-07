@@ -22,19 +22,18 @@ def run_benchmark(m, n, p):
 
     # Distributed execution (all processes run this)
     start_time = time.time()
-    distributed_matrix_mult(A, B, m, n, p)
+    distributed_matrix_mult(A, B, m, n, p)  # Make sure this function is correct
     dist_time = time.time() - start_time
 
     serial_time = comm.bcast(serial_time, root=0)
 
     return serial_time, dist_time
 
-
 if __name__ == "__main__":
     # Matrix dimensions
-    m = 1000
-    n = 1000
-    p = 1000
+    m = 2000  # Increased matrix size
+    n = 2000
+    p = 2000
 
     serial_time, dist_time = run_benchmark(m, n, p)
 
