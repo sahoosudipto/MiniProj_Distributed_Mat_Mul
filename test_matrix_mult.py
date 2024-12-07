@@ -1,4 +1,4 @@
-%%writefile test_matrix_mult.py
+
 import unittest
 import numpy as np
 from dist_matrix_mult import serial_matrix_mult, distributed_matrix_mult
