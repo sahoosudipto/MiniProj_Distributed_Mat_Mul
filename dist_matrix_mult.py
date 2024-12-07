@@ -31,25 +31,22 @@ def distribute_matrix(matrix, comm, root=0, axis=0):  # Add axis parameter
     local_chunk = comm.scatter(matrix_chunks, root=root)
     return local_chunk
     
-# def distributed_matrix_mult(A, B, m, n, p):
-#     """Performs distributed matrix multiplication."""
 
-#     # Distribute matrices A and B (split A by rows, B by columns)
-#     local_A = distribute_matrix(A, comm)  
-#     local_B = distribute_matrix(B, comm) 
 
-#     # Perform local matrix multiplication
-#     local_C = np.dot(local_A, local_B)
+def distributed_matrix_mult(A, B, m, n, p):
+    """Performs distributed matrix multiplication."""
 
-#     # Gather results from all processes
-#     gathered_results = comm.gather(local_C, root=0)
+    # ... (distribute matrices A and B) ...
 
-#     if rank == 0:
-#         # Concatenate the gathered results along axis 1 (columns)
-#         C = np.concatenate(gathered_results, axis=1)  
-#         return C
-#     else:
-#         return None
+    # Perform local matrix multiplication
+    local_C = np.dot(local_A, local_B)
+
+    # Gather results from all processes
+    C = np.empty((m, p))  # Create an empty C matrix on all processes
+    comm.Gather(local_C, C, root=0)  # Gather into the C matrix
+
+    return C  # Return the complete C matrix from all processes
+
 
 def distributed_matrix_mult(A, B, m, n, p):
     """Performs distributed matrix multiplication."""
@@ -59,17 +56,21 @@ def distributed_matrix_mult(A, B, m, n, p):
     local_B = distribute_matrix(B.T, comm, axis=0)  # Split B transpose by rows
 
     # Perform local matrix multiplication
-    local_C = np.dot(local_A, local_B.T)  # Transpose local_B back
+    local_C = np.dot(local_A, local_B)  # Transpose local_B back
 
     # Gather results from all processes
-    gathered_results = comm.gather(local_C, root=0)
+    C = np.empty((m, p))  # Create an empty C matrix on all processes
+    comm.Gather(local_C, C, root=0)  # Gather into the C matrix
+    
+    return C  # Return the complete C matrix from all processes
 
-    if rank == 0:
-        # Concatenate the gathered results along axis 0 (rows)
-        C = np.concatenate(gathered_results, axis=0)
-        return C
-    else:
-        return None
+    # if rank == 0:
+    #     # Concatenate the gathered results along axis 0 (rows)
+    #     C = np.concatenate(gathered_results, axis=0)
+    #     return C
+    # else:
+    #     return None
+
 
 # def distributed_matrix_mult(A, B, m, n, p):
 #     """
