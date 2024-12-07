@@ -16,13 +16,19 @@ def run_benchmark(m, n, p):
         start_time = time.time()
         serial_matrix_mult(A, B)
         serial_time = time.time() - start_time
+    else:
+        serial_time = None  # Other processes don't run serial version
 
-        # Distributed execution
-        start_time = time.time()
-        distributed_matrix_mult(A, B, m, n, p)
-        dist_time = time.time() - start_time
+    # Distributed execution (all processes run this)
+    start_time = time.time()
+    distributed_matrix_mult(A, B, m, n, p)
+    dist_time = time.time() - start_time
 
-        return serial_time, dist_time
+    # Broadcast serial_time from rank 0 to all other processes
+    serial_time = comm.bcast(serial_time, root=0) 
+
+    return serial_time, dist_time  # All processes return values
+
 
 if __name__ == "__main__":
     # Matrix dimensions
