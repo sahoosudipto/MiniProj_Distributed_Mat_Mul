@@ -31,9 +31,9 @@ def run_benchmark(m, n, p):
 
 if __name__ == "__main__":
     # Matrix dimensions
-    m = 2000  # Increased matrix size
-    n = 2000
-    p = 2000
+    m = 600  # Increased matrix size
+    n = 600
+    p = 600
 
     serial_time, dist_time = run_benchmark(m, n, p)
 
