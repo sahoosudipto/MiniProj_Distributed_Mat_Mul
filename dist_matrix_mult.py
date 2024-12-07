@@ -1,4 +1,3 @@
-%%writefile dist_matrix_mult.py
 from mpi4py import MPI
 import numpy as np
 import time
