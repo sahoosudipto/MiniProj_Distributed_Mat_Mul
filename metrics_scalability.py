@@ -1,4 +1,3 @@
-%%writefile metrics_scalability.py
 import time
 from dist_matrix_mult import serial_matrix_mult, distributed_matrix_mult
 from mpi4py import MPI
