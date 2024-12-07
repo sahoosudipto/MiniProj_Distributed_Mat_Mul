@@ -31,22 +31,42 @@ def distribute_matrix(matrix, comm, root=0, axis=0):  # Add axis parameter
     local_chunk = comm.scatter(matrix_chunks, root=root)
     return local_chunk
     
+# def distributed_matrix_mult(A, B, m, n, p):
+#     """Performs distributed matrix multiplication."""
+
+#     # Distribute matrices A and B (split A by rows, B by columns)
+#     local_A = distribute_matrix(A, comm)  
+#     local_B = distribute_matrix(B, comm) 
+
+#     # Perform local matrix multiplication
+#     local_C = np.dot(local_A, local_B)
+
+#     # Gather results from all processes
+#     gathered_results = comm.gather(local_C, root=0)
+
+#     if rank == 0:
+#         # Concatenate the gathered results along axis 1 (columns)
+#         C = np.concatenate(gathered_results, axis=1)  
+#         return C
+#     else:
+#         return None
+
 def distributed_matrix_mult(A, B, m, n, p):
     """Performs distributed matrix multiplication."""
 
-    # Distribute matrices A and B (split A by rows, B by columns)
-    local_A = distribute_matrix(A, comm)  
-    local_B = distribute_matrix(B, comm) 
+    # Distribute matrices A (split by rows) and B (split by columns)
+    local_A = distribute_matrix(A, comm, axis=0)  # Split A by rows 
+    local_B = distribute_matrix(B.T, comm, axis=0)  # Split B transpose by rows
 
     # Perform local matrix multiplication
-    local_C = np.dot(local_A, local_B)
+    local_C = np.dot(local_A, local_B.T)  # Transpose local_B back
 
     # Gather results from all processes
     gathered_results = comm.gather(local_C, root=0)
 
     if rank == 0:
-        # Concatenate the gathered results along axis 1 (columns)
-        C = np.concatenate(gathered_results, axis=1)  
+        # Concatenate the gathered results along axis 0 (rows)
+        C = np.concatenate(gathered_results, axis=0)
         return C
     else:
         return None
