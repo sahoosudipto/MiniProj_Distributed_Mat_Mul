@@ -31,39 +31,24 @@ def distribute_matrix(matrix, comm, root=0, axis=0):  # Add axis parameter
     local_chunk = comm.scatter(matrix_chunks, root=root)
     return local_chunk
     
-
-
-def distributed_matrix_mult(A, B, m, n, p):
-    """Performs distributed matrix multiplication."""
-
-    # ... (distribute matrices A and B) ...
-
-    # Perform local matrix multiplication
-    local_C = np.dot(local_A, local_B)
-
-    # Gather results from all processes
-    C = np.empty((m, p))  # Create an empty C matrix on all processes
-    comm.Gather(local_C, C, root=0)  # Gather into the C matrix
-
-    return C  # Return the complete C matrix from all processes
-
-
 def distributed_matrix_mult(A, B, m, n, p):
     """Performs distributed matrix multiplication."""
 
     # Distribute matrices A (split by rows) and B (split by columns)
-    local_A = distribute_matrix(A, comm, axis=0)  # Split A by rows 
-    local_B = distribute_matrix(B, comm, axis=1).T
+    local_A = distribute_matrix(A, comm, axis=0)  # Split A by rows
+    local_B = distribute_matrix(B.T, comm, axis=0).T  # Split B transpose and transpose back to column layout
 
-
-    # Perform local matrix multiplication
-    local_C = np.dot(local_A, local_B)  # Transpose local_B back
+    # Ensure the shapes align for the dot product
+    local_C = np.dot(local_A, local_B)
 
     # Gather results from all processes
-    C = np.empty((m, p))  # Create an empty C matrix on all processes
+    C = None
+    if rank == 0:
+        C = np.empty((m, p))  # Create an empty C matrix on rank 0
     comm.Gather(local_C, C, root=0)  # Gather into the C matrix
     
     return C  # Return the complete C matrix from all processes
+
 
     # if rank == 0:
     #     # Concatenate the gathered results along axis 0 (rows)
