@@ -16,22 +16,21 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-def distribute_matrix(matrix, comm, root=0):
+
+def distribute_matrix(matrix, comm, root=0, axis=0):  # Add axis parameter
     """Distributes a matrix across processes."""
     rank = comm.Get_rank()
     size = comm.Get_size()
 
-    # Master process splits the matrix
     if rank == root:
-        # Split the matrix along the specified axis (axis=1 for columns)
-        matrix_chunks = np.array_split(matrix, size, axis=1) 
+        # Split the matrix along the specified axis
+        matrix_chunks = np.array_split(matrix, size, axis=axis)  
     else:
         matrix_chunks = None
 
-    # Scatter the chunks to all processes
     local_chunk = comm.scatter(matrix_chunks, root=root)
     return local_chunk
-
+    
 def distributed_matrix_mult(A, B, m, n, p):
     """Performs distributed matrix multiplication."""
 
