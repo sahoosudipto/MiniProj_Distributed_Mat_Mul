@@ -53,7 +53,8 @@ def distributed_matrix_mult(A, B, m, n, p):
 
     # Distribute matrices A (split by rows) and B (split by columns)
     local_A = distribute_matrix(A, comm, axis=0)  # Split A by rows 
-    local_B = distribute_matrix(B.T, comm, axis=0)  # Split B transpose by rows
+    local_B = distribute_matrix(B, comm, axis=1).T
+
 
     # Perform local matrix multiplication
     local_C = np.dot(local_A, local_B)  # Transpose local_B back
