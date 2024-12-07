@@ -11,14 +11,30 @@ def serial_matrix_mult(A, B):
 
 
 def distributed_matrix_mult(A, B, m, n, p):
-    # Determine local rows for each process
-    local_rows = m // size
-    start_row = rank * local_rows
+    """
+    Performs distributed matrix multiplication using MPI.
+
+    Args:
+        A: Numpy array representing the first matrix.
+        B: Numpy array representing the second matrix.
+        m: Number of rows in matrix A.
+        n: Number of columns in matrix A (and rows in matrix B).
+        p: Number of columns in matrix B.
+
+    Returns:
+        C: Numpy array representing the result matrix.
+           Only rank 0 will have the complete result.
+    """
+
+    # Calculate local rows for each process, accounting for uneven distribution
+    local_rows = m // size + (rank < m % size)  
+    start_row = sum(m // size + (i < m % size) for i in range(rank))
     end_row = start_row + local_rows
 
-    # Scatter matrix A
+    # Scatter matrix A (using slicing for uneven distribution)
     local_A = np.empty((local_rows, n))
-    comm.Scatter(A, local_A, root=0)
+    comm.Scatterv([A, (local_rows * np.ones(size, dtype=int), 
+                       np.arange(size) * (m // size + (np.arange(size) < m % size)) * n), MPI.DOUBLE], local_A, root=0)
 
     # Broadcast matrix B
     B = comm.bcast(B, root=0)
@@ -26,9 +42,11 @@ def distributed_matrix_mult(A, B, m, n, p):
     # Perform local matrix multiplication
     local_C = np.dot(local_A, B)
 
-    # Gather results
+    # Gather results (using Gatherv for uneven distribution)
+    counts = (m // size + (np.arange(size) < m % size)) * p
+    displacements = np.cumsum(counts) - counts
     C = np.empty((m, p))
-    comm.Gather(local_C, C, root=0)
+    comm.Gatherv(local_C, [C, (counts, displacements), MPI.DOUBLE], root=0)
 
     return C
 
