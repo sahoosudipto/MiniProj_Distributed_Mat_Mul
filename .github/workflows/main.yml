@@ -31,6 +31,6 @@ jobs:
       run: |
         mpirun --oversubscribe -np 4 python test_matrix_mult.py
 
-    - name: Run benchmarks (example)
+    - name: Run benchmarks
       run: |
         mpirun --oversubscribe  -np 4 python metrics_scalability.py
