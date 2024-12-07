@@ -7,32 +7,35 @@ size = comm.Get_size()
 
 
 def serial_matrix_mult(A, B):
-    """Perform serial matrix multiplication."""
-"""
-    Standard serial matrix multiplication implementation
+    """
+    Standard serial matrix multiplication implementation.
 
     Args:
-        A (np.ndarray): First input matrix
-        B (np.ndarray): Second input matrix
+        A (np.ndarray): First input matrix.
+        B (np.ndarray): Second input matrix.
 
     Returns:
-        np.ndarray: Resulting matrix after multiplication
+        np.ndarray: Resulting matrix after multiplication.
     """
+    # Get dimensions of the matrices
     rows_A, cols_A = A.shape
     rows_B, cols_B = B.shape
 
+    # Validate matrix dimensions for multiplication
     if cols_A != rows_B:
-        raise ValueError("Matrix dimensions incompatible for multiplication")
+        raise ValueError("Matrix dimensions incompatible for multiplication.")
 
+    # Initialize the result matrix with zeros
     result = np.zeros((rows_A, cols_B))
 
-
+    # Perform element-wise computation for matrix multiplication
     for i in range(rows_A):
         for j in range(cols_B):
             for k in range(cols_A):
                 result[i][j] += A[i][k] * B[k][j]
 
     return result
+
 
 
 def distribute_matrix(matrix, axis=0, root=0):
