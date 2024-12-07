@@ -30,32 +30,49 @@ def distribute_matrix(matrix, comm, root=0, axis=0):  # Add axis parameter
 
     local_chunk = comm.scatter(matrix_chunks, root=root)
     return local_chunk
-    
+
+
 def distributed_matrix_mult(A, B, m, n, p):
     """Performs distributed matrix multiplication."""
+    from mpi4py import MPI
+    import numpy as np
 
-    # Distribute matrices A (split by rows) and B (split by columns)
-    local_A = distribute_matrix(A, comm, axis=0)  # Split A by rows
-    local_B = distribute_matrix(B.T, comm, axis=0).T  # Split B transpose and transpose back to column layout
+    # MPI variables
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
 
-    # Ensure the shapes align for the dot product
+    # Distribute A by rows and B by columns
+    local_A = distribute_matrix(A, comm, axis=0)  # Each process gets a subset of rows of A
+    local_B = distribute_matrix(B.T, comm, axis=0).T  # Each process gets a subset of cols of B, transposed back
+
+    # Perform local computation
     local_C = np.dot(local_A, local_B)
 
-    # Gather results from all processes
-    C = None
+    # Prepare the output matrix on the root process
     if rank == 0:
-        C = np.empty((m, p))  # Create an empty C matrix on rank 0
-    comm.Gather(local_C, C, root=0)  # Gather into the C matrix
-    
-    return C  # Return the complete C matrix from all processes
+        C = np.zeros((m, p))  # Root process will gather all parts into this matrix
+    else:
+        C = None
 
+    # Gather all local_C parts into the root process
+    recvbuf = None
+    if rank == 0:
+        recvbuf = np.empty((m, p))  # Allocate a buffer for gathering
+    comm.Gather(local_C, recvbuf, root=0)
 
-    # if rank == 0:
-    #     # Concatenate the gathered results along axis 0 (rows)
-    #     C = np.concatenate(gathered_results, axis=0)
-    #     return C
-    # else:
-    #     return None
+    # Root process assembles the matrix from chunks
+    if rank == 0:
+        rows_per_proc = m // size
+        extra_rows = m % size
+        offset = 0
+        for i in range(size):
+            rows = rows_per_proc + (1 if i < extra_rows else 0)
+            C[offset:offset+rows, :] = recvbuf[offset:offset+rows, :]
+            offset += rows
+        return C
+    else:
+        return None
 
 
 # def distributed_matrix_mult(A, B, m, n, p):
