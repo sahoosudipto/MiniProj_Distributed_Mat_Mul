@@ -9,46 +9,88 @@ size = comm.Get_size()
 def serial_matrix_mult(A, B):
     return np.dot(A, B)
 
+from mpi4py import MPI
+import numpy as np
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+def distribute_matrix(matrix, comm, root=0):
+    """Distributes a matrix across processes."""
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    # Master process splits the matrix
+    if rank == root:
+        # Split the matrix along the specified axis (axis=1 for columns)
+        matrix_chunks = np.array_split(matrix, size, axis=1) 
+    else:
+        matrix_chunks = None
+
+    # Scatter the chunks to all processes
+    local_chunk = comm.scatter(matrix_chunks, root=root)
+    return local_chunk
 
 def distributed_matrix_mult(A, B, m, n, p):
-    """
-    Performs distributed matrix multiplication using MPI.
+    """Performs distributed matrix multiplication."""
 
-    Args:
-        A: Numpy array representing the first matrix.
-        B: Numpy array representing the second matrix.
-        m: Number of rows in matrix A.
-        n: Number of columns in matrix A (and rows in matrix B).
-        p: Number of columns in matrix B.
-
-    Returns:
-        C: Numpy array representing the result matrix.
-           Only rank 0 will have the complete result.
-    """
-
-    # Calculate local rows for each process, accounting for uneven distribution
-    local_rows = m // size + (rank < m % size)  
-    start_row = sum(m // size + (i < m % size) for i in range(rank))
-    end_row = start_row + local_rows
-
-    # Scatter matrix A (using slicing for uneven distribution)
-    local_A = np.empty((local_rows, n))
-    comm.Scatterv([A, (local_rows * np.ones(size, dtype=int), 
-                       np.arange(size) * (m // size + (np.arange(size) < m % size)) * n), MPI.DOUBLE], local_A, root=0)
-
-    # Broadcast matrix B
-    B = comm.bcast(B, root=0)
+    # Distribute matrices A and B (split A by rows, B by columns)
+    local_A = distribute_matrix(A, comm)  
+    local_B = distribute_matrix(B, comm) 
 
     # Perform local matrix multiplication
-    local_C = np.dot(local_A, B)
+    local_C = np.dot(local_A, local_B)
 
-    # Gather results (using Gatherv for uneven distribution)
-    counts = (m // size + (np.arange(size) < m % size)) * p
-    displacements = np.cumsum(counts) - counts
-    C = np.empty((m, p))
-    comm.Gatherv(local_C, [C, (counts, displacements), MPI.DOUBLE], root=0)
+    # Gather results from all processes
+    gathered_results = comm.gather(local_C, root=0)
 
-    return C
+    if rank == 0:
+        # Concatenate the gathered results along axis 1 (columns)
+        C = np.concatenate(gathered_results, axis=1)  
+        return C
+    else:
+        return None
+
+# def distributed_matrix_mult(A, B, m, n, p):
+#     """
+#     Performs distributed matrix multiplication using MPI.
+
+#     Args:
+#         A: Numpy array representing the first matrix.
+#         B: Numpy array representing the second matrix.
+#         m: Number of rows in matrix A.
+#         n: Number of columns in matrix A (and rows in matrix B).
+#         p: Number of columns in matrix B.
+
+#     Returns:
+#         C: Numpy array representing the result matrix.
+#            Only rank 0 will have the complete result.
+#     """
+
+#     # Calculate local rows for each process, accounting for uneven distribution
+#     local_rows = m // size + (rank < m % size)  
+#     start_row = sum(m // size + (i < m % size) for i in range(rank))
+#     end_row = start_row + local_rows
+
+#     # Scatter matrix A (using slicing for uneven distribution)
+#     local_A = np.empty((local_rows, n))
+#     comm.Scatterv([A, (local_rows * np.ones(size, dtype=int), 
+#                        np.arange(size) * (m // size + (np.arange(size) < m % size)) * n), MPI.DOUBLE], local_A, root=0)
+
+#     # Broadcast matrix B
+#     B = comm.bcast(B, root=0)
+
+#     # Perform local matrix multiplication
+#     local_C = np.dot(local_A, B)
+
+#     # Gather results (using Gatherv for uneven distribution)
+#     counts = (m // size + (np.arange(size) < m % size)) * p
+#     displacements = np.cumsum(counts) - counts
+#     C = np.empty((m, p))
+#     comm.Gatherv(local_C, [C, (counts, displacements), MPI.DOUBLE], root=0)
+
+#     return C
 
 if __name__ == "__main__":
     m = 500  # Rows of matrix A
